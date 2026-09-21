@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'dev_access_secret_change_me_32_chars_min';
@@ -14,13 +14,13 @@ export interface AccessTokenPayload {
 
 export function signAccessToken(payload: Omit<AccessTokenPayload, 'iat' | 'exp'>) {
   return jwt.sign(payload, ACCESS_SECRET, {
-    expiresIn: process.env.ACCESS_TOKEN_TTL || '15m',
+    expiresIn: (process.env.ACCESS_TOKEN_TTL || '15m') as SignOptions['expiresIn'],
   });
 }
 
 export function signRefreshToken(payload: { userId: string; tokenId: string }) {
   return jwt.sign(payload, REFRESH_SECRET, {
-    expiresIn: process.env.REFRESH_TOKEN_TTL || '30d',
+    expiresIn: (process.env.REFRESH_TOKEN_TTL || '30d') as SignOptions['expiresIn'],
   });
 }
 

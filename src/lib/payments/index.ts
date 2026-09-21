@@ -10,14 +10,14 @@ export interface PaymentProvider {
 }
 
 export class ManualUpiProvider implements PaymentProvider {
-  async createOrder(amount: number) {
+  async createOrder(_amount: number, _meta: any) {
     // manual flow: return static UPI details
     return {
       orderId: `manual_${Date.now()}`,
       qr: process.env.UPI_QR_URL || '',
     };
   }
-  async verifyPayment() {
+  async verifyPayment(_payload: any) {
     // admin verifies manually
     return true;
   }
@@ -25,10 +25,10 @@ export class ManualUpiProvider implements PaymentProvider {
 
 // Razorpay stub — swap in later
 export class RazorpayProvider implements PaymentProvider {
-  async createOrder(amount: number) {
+  async createOrder(_amount: number, _meta: any): Promise<{ orderId: string; qr?: string }> {
     throw new Error('Razorpay not configured yet — enable RAZORPAY_KEY_ID/SECRET then implement');
   }
-  async verifyPayment() {
+  async verifyPayment(_payload: any) {
     return false;
   }
 }
