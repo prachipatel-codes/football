@@ -1,0 +1,183 @@
+// OFFSIDE COMMUNITY - Prisma Schema
+// PostgreSQL + Next.js 14
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  phone         String    @unique
+  passwordHash  String
+  role          Role      @default(PLAYER)
+  city          String?
+  position      String?   // GK, Defender, Midfielder, Forward
+  avatarUrl     String?
+  isVerified    Boolean   @default(false)
+  emailVerifyToken String? 
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  bookings      Booking[]
+  reviews       Review[]
+  verifiedBookings Booking[] @relation("VerifiedBy")
+  promotedById  String?
+  promotedBy    User?     @relation("UserPromotion", fields: [promotedById], references: [id])
+  promotedUsers User[]    @relation("UserPromotion")
+  refreshTokens RefreshToken[]
+}
+
+enum Role {
+  PLAYER
+  ADMIN
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revoked   Boolean  @default(false)
+  replacedBy String?
+}
+
+model City {
+  id         String   @id @default(cuid())
+  name       String   @unique // "Vadodara" | "Ahmedabad"
+  slug       String   @unique
+  chiefName  String?  // Football Chief / coordinator
+  chiefPhone String?
+  isActive   Boolean  @default(true)
+  venues     Venue[]
+  createdAt  DateTime @default(now())
+}
+
+model Venue {
+  id        String   @id @default(cuid())
+  name      String   // "Sportingo Turf"
+  address   String
+  mapLink   String?
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id])
+  matches   Match[]
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Match {
+  id            String      @id @default(cuid())
+  venueId       String
+  venue         Venue       @relation(fields: [venueId], references: [id])
+  date          DateTime
+  startTime     DateTime
+  endTime       DateTime
+  category      MatchCategory
+  price         Int
+  maxPlayers    Int         @default(14)
+  status        MatchStatus @default(OPEN)
+  notes         String?
+  createdById   String
+  bookings      Booking[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([date, status])
+}
+
+enum MatchCategory {
+  STANDARD
+  PLUS
+}
+
+enum MatchStatus {
+  OPEN
+  FULL
+  CANCELLED
+  COMPLETED
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  matchId         String
+  match           Match         @relation(fields: [matchId], references: [id])
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  upiIdUsed       String
+  screenshotUrl   String
+  paymentStatus   PaymentStatus @default(PENDING)
+  bookingStatus   BookingStatus @default(ACTIVE)
+  refundRequested Boolean       @default(false)
+  refundStatus    RefundStatus?
+  refundUpiId     String?
+  verifiedById    String?
+  verifiedBy      User?         @relation("VerifiedBy", fields: [verifiedById], references: [id])
+  verifiedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([matchId, userId])
+  @@index([userId, paymentStatus])
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum BookingStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum RefundStatus {
+  REQUESTED
+  PROCESSED
+  DENIED
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  matchId   String?
+  rating    Int      // 1-5
+  comment   String   @db.Text
+  imageUrl  String?
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AppConfig {
+  id              String   @id @default("singleton")
+  upiId           String   @default("offside@upi")
+  upiName         String   @default("Offside Community")
+  qrCodeUrl       String?
+  contactPhone    String   @default("9313074629")
+  instagramHandle String   @default("@theoffsidesociety")
+  maintenanceMode Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId, createdAt])
+}
